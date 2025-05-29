@@ -19,7 +19,7 @@ def ask_flowise(question, history=[]):
             "chatHistory": history
         }
         print("[PAYLOAD TO FLOWISE]:", payload)
-        response = requests.post(FLOWISE_URL, json=payload, timeout=60)
+        response = requests.post(FLOWISE_URL, json=payload, timeout=120)
         response.raise_for_status()
         return response.json().get("text", "🤖 Flowise не ответил.")
     except Exception as e:

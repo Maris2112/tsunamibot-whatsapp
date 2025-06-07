@@ -42,15 +42,13 @@ def send_whatsapp_message(phone, text):
 def whatsapp_webhook():
     try:
         data = request.get_json(force=True)
-        sender = data.get("senderData", {}).get("chatId")
 
-        # 🔧 Расширенный парсинг текста
-        message_data = data.get("messageData", {})
-        message = (
-            message_data.get("textMessageData", {}).get("textMessage")
-            or message_data.get("extendedTextMessageData", {}).get("text")
-            or message_data.get("conversationData", {}).get("body")
-        )
+        # === Главная защита от зацикливания ===
+        if data.get("typeWebhook") != "incomingMessageReceived":
+            return jsonify({"status": "ignored"}), 200
+
+        message = data.get("messageData", {}).get("textMessageData", {}).get("textMessage")
+        sender = data.get("senderData", {}).get("chatId")
 
         print(f"[WhatsApp IN]: {message}")
         if message:
@@ -70,3 +68,4 @@ def root():
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
+    app = app

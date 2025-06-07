@@ -19,9 +19,9 @@ def ask_flowise(question, history=[]):
             "chatHistory": history
         }
         print("[PAYLOAD TO FLOWISE]:", payload)
-        response = requests.post(FLOWISE_URL, json=payload, timeout=120)
+        response = requests.post(FLOWISE_URL, json=payload, timeout=60)
         response.raise_for_status()
-        return response.json().get("text", "\U0001F916 Flowise не ответил.")
+        return response.json().get("text", "🤖 Flowise не ответил.")
     except Exception as e:
         print("[ERROR] Flowise call failed:", e)
         return "⚠️ Ошибка при обращении к ИИ. Попробуй позже."
@@ -42,16 +42,10 @@ def send_whatsapp_message(phone, text):
 def whatsapp_webhook():
     try:
         data = request.get_json(force=True)
-        print("[DEBUG RAW DATA]:", data)
-
-        # 🔪 Критический фильтр, чтобы не отвечать самому себе
-        if data.get("typeWebhook") != "incomingMessageReceived":
-            print("[INFO] Пропущено: не входящее сообщение.")
-            return jsonify({"status": "skipped"}), 200
-
-        message_data = data.get("messageData", {})
         sender = data.get("senderData", {}).get("chatId")
 
+        # 🔧 Расширенный парсинг текста
+        message_data = data.get("messageData", {})
         message = (
             message_data.get("textMessageData", {}).get("textMessage")
             or message_data.get("extendedTextMessageData", {}).get("text")
@@ -59,20 +53,10 @@ def whatsapp_webhook():
         )
 
         print(f"[WhatsApp IN]: {message}")
-
         if message:
             answer = ask_flowise(message)
-
-            if isinstance(answer, list):
-                answer = "\n".join(str(a) for a in answer)
-            if len(answer) > 1000:
-                answer = answer[:997] + "..."
-
-            if not answer or WHATSAPP_INSTANCE_ID in answer or answer.lower().count("tsunami") > 4:
-                print("[WARNING] Подозрительный ответ. Пропущено.")
-            else:
-                phone_number = sender.replace("@c.us", "")
-                send_whatsapp_message(phone_number, answer)
+            phone_number = sender.replace("@c.us", "")
+            send_whatsapp_message(phone_number, answer)
 
         return jsonify({"status": "ok"}), 200
     except Exception:

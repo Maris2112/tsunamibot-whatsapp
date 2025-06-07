@@ -42,12 +42,11 @@ def send_whatsapp_message(phone, text):
 def whatsapp_webhook():
     try:
         data = request.get_json(force=True)
-        print("[DEBUG RAW DATA]:", data)  # ← Для отладки
+        print("[DEBUG RAW DATA]:", data)
 
         message_data = data.get("messageData", {})
         sender = data.get("senderData", {}).get("chatId")
 
-        # Расширенный парсинг текста
         message = (
             message_data.get("textMessageData", {}).get("textMessage")
             or message_data.get("extendedTextMessageData", {}).get("text")
@@ -58,14 +57,22 @@ def whatsapp_webhook():
 
         if message:
             answer = ask_flowise(message)
-            phone_number = sender.replace("@c.us", "")
-            send_whatsapp_message(phone_number, answer)
+
+            if isinstance(answer, list):
+                answer = "\n".join(str(a) for a in answer)
+            if len(answer) > 1000:
+                answer = answer[:997] + "..."
+
+            if not answer or WHATSAPP_INSTANCE_ID in answer or answer.lower().count("tsunami") > 4:
+                print("[WARNING] Подозрительный ответ. Пропущено.")
+            else:
+                phone_number = sender.replace("@c.us", "")
+                send_whatsapp_message(phone_number, answer)
 
         return jsonify({"status": "ok"}), 200
     except Exception:
         traceback.print_exc()
         return jsonify({"status": "fail"}), 500
-
 
 # === Healthcheck ===
 @app.route("/", methods=["GET"])
@@ -74,6 +81,5 @@ def root():
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
-    
     app = app
 

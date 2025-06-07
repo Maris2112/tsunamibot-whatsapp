@@ -1,3 +1,4 @@
+нет. давай так. 1) я сейчас дам тебе main.py.2) прочти его и скажи как сейчас у нас происходит и что конкретно надо внести.
 from flask import Flask, request, jsonify
 import requests
 import traceback
@@ -42,32 +43,14 @@ def send_whatsapp_message(phone, text):
 def whatsapp_webhook():
     try:
         data = request.get_json(force=True)
-        print("[DEBUG RAW DATA]:", data)
-
-        message_data = data.get("messageData", {})
+        message = data.get("messageData", {}).get("textMessageData", {}).get("textMessage")
         sender = data.get("senderData", {}).get("chatId")
 
-        message = (
-            message_data.get("textMessageData", {}).get("textMessage")
-            or message_data.get("extendedTextMessageData", {}).get("text")
-            or message_data.get("conversationData", {}).get("body")
-        )
-
         print(f"[WhatsApp IN]: {message}")
-
         if message:
             answer = ask_flowise(message)
-
-            if isinstance(answer, list):
-                answer = "\n".join(str(a) for a in answer)
-            if len(answer) > 1000:
-                answer = answer[:997] + "..."
-
-            if not answer or WHATSAPP_INSTANCE_ID in answer or answer.lower().count("tsunami") > 4:
-                print("[WARNING] Подозрительный ответ. Пропущено.")
-            else:
-                phone_number = sender.replace("@c.us", "")
-                send_whatsapp_message(phone_number, answer)
+            phone_number = sender.replace("@c.us", "")
+            send_whatsapp_message(phone_number, answer)
 
         return jsonify({"status": "ok"}), 200
     except Exception:
@@ -81,5 +64,7 @@ def root():
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
+    
     app = app
+
 

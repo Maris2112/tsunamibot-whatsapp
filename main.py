@@ -50,25 +50,41 @@ def whatsapp_webhook():
         data = request.get_json(force=True)
         print("[WEBHOOK] Received:", data)
 
-        # --- Basic checks ---
+        # === Защита от самогенерации ===
         type_hook = data.get("typeWebhook")
         sender_id = data.get("senderData", {}).get("chatId")
-        message = data.get("messageData", {}).get("textMessageData", {}).get("textMessage")
+        bot_id = BOT_CHAT_ID
 
         if type_hook != "incomingMessageReceived":
             return jsonify({"status": "ignored"}), 200
 
-        if sender_id is None or BOT_CHAT_ID is None:
-            print("[WARNING] sender_id or bot_id is None")
-            return jsonify({"status": "missing_id"}), 200
-
-        if sender_id == BOT_CHAT_ID:
-            print("[SKIP] Ignoring self-message")
+        if sender_id == bot_id:
+            print("[SKIP] Self-message detected.")
             return jsonify({"status": "self-message"}), 200
+
+        # === Извлечение текста ===
+        message = None
+        msg_data = data.get("messageData", {})
+        if "textMessageData" in msg_data:
+            message = msg_data["textMessageData"].get("textMessage")
+        elif "extendedTextMessageData" in msg_data:
+            message = msg_data["extendedTextMessageData"].get("text")
 
         if not message:
             print("[SKIP] Empty or non-text message")
             return jsonify({"status": "no-message"}), 200
+
+        print("[MESSAGE] From:", sender_id, "| Text:", message)
+        phone_number = sender_id.replace("@c.us", "")
+        answer = ask_flowise(message)
+        send_whatsapp_message(phone_number, answer)
+
+        return jsonify({"status": "ok"}), 200
+
+    except Exception:
+        traceback.print_exc()
+        return jsonify({"status": "fail"}), 500
+
 
         # --- Process message ---
         phone_number = sender_id.replace("@c.us", "")

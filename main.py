@@ -11,7 +11,7 @@ WHATSAPP_TOKEN = os.environ.get("WHATSAPP_TOKEN")
 WHATSAPP_API_URL = f"https://7105.api.greenapi.com/waInstance{WHATSAPP_INSTANCE_ID}/sendMessage/{WHATSAPP_TOKEN}"
 FLOWISE_URL = os.environ.get("FLOWISE_URL")
 
-# === In-memory список обработанных сообщений (простой способ избежать повторов)
+# === In-memory список обработанных сообщений
 PROCESSED_IDS = set()
 
 # === Flowise Request ===
@@ -55,13 +55,11 @@ def whatsapp_webhook():
             print("[WARN] Missing sender or message_id.")
             return jsonify({"status": "ignored"}), 200
 
-        # === Предотвращение повторной обработки ===
         if message_id in PROCESSED_IDS:
-            print(f"[DUPLICATE] message_id {message_id} уже обработан.")
+            print(f"[DUPLICATE] message_id {message_id} already processed.")
             return jsonify({"status": "duplicate"}), 200
         PROCESSED_IDS.add(message_id)
 
-        # === Расширенный парсинг текста
         message_data = data.get("messageData", {})
         message = (
             message_data.get("textMessageData", {}).get("textMessage") or
@@ -71,19 +69,16 @@ def whatsapp_webhook():
 
         print(f"[WhatsApp IN]: {message}")
 
-        # === Фильтрируем пустые или стартовые фразы
         if not message:
             return jsonify({"status": "no_message"}), 200
 
         if message.lower().strip() in ["начать", "старт", "узнать об этом", "привет"]:
             intro = (
-                "Привет! 👋 Добро пожаловать в Tsunami AI — ваш гид по летнему отдыху! "
-                "Задайте любой вопрос, и я подскажу всё о зонах, ценах, правилах и событиях! 🌴☀️"
+                "Привет! 👋 Добро пожаловать в Tsunami AI — ваш гид по летнему отдыху! Задайте любой вопрос, и я подскажу всё о зонах, ценах, правилах и событиях! 🌴☀️"
             )
             send_whatsapp_message(sender.replace("@c.us", ""), intro)
             return jsonify({"status": "greeted"}), 200
 
-        # === Основной ответ от Flowise
         answer = ask_flowise(message)
 
         if isinstance(answer, list):
@@ -92,7 +87,7 @@ def whatsapp_webhook():
             answer = answer[:997] + "..."
 
         if not answer or WHATSAPP_INSTANCE_ID in answer:
-            print("[WARNING] Подозрительный ответ от Flowise. Пропущено.")
+            print("[WARNING] Suspicious Flowise response. Skipped.")
             return jsonify({"status": "filtered"}), 200
 
         phone_number = sender.replace("@c.us", "")
@@ -104,7 +99,6 @@ def whatsapp_webhook():
         traceback.print_exc()
         return jsonify({"status": "fail"}), 500
 
-# === Healthcheck ===
 @app.route("/", methods=["GET"])
 def root():
     return "Flowise WhatsApp Bot is running ✅"

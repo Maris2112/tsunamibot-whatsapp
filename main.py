@@ -26,11 +26,11 @@ def ask_flowise(question, history=[]):
         print("[ERROR] Flowise call failed:", e)
         return "⚠️ Ошибка при обращении к ИИ. Попробуй позже."
 
-# === WhatsApp Sender ===
-def send_whatsapp_message(chat_id, text):
+# === WhatsApp ===
+def send_whatsapp_message(phone, text):
     try:
         payload = {
-            "chatId": chat_id,
+            "chatId": f"{phone}@c.us",
             "message": text
         }
         requests.post(WHATSAPP_API_URL, json=payload)
@@ -38,7 +38,6 @@ def send_whatsapp_message(chat_id, text):
         print("[ERROR] WhatsApp message failed:")
         traceback.print_exc()
 
-# === Incoming Webhook ===
 @app.route("/whatsapp-webhook", methods=["POST"])
 def whatsapp_webhook():
     try:
@@ -46,18 +45,21 @@ def whatsapp_webhook():
 
         type_hook = data.get("typeWebhook")
         sender_id = data.get("senderData", {}).get("chatId")
-        bot_id = BOT_CHAT_ID
+        if not sender_id:
+            return jsonify({"status": "no sender"}), 200
 
         if type_hook != "incomingMessageReceived":
             return jsonify({"status": "ignored"}), 200
 
-        if sender_id == bot_id:
-            return jsonify({"status": "self-message"}), 200
+        if sender_id == BOT_CHAT_ID:
+            return jsonify({"status": "self-message filtered"}), 200
 
         message = data.get("messageData", {}).get("textMessageData", {}).get("textMessage")
         if message:
+            print(f"[INCOMING]: {sender_id} -> {message}")
+            phone_number = sender_id.replace("@c.us", "")
             answer = ask_flowise(message)
-            send_whatsapp_message(sender_id, answer or "⚠️ Ответ не получен.")
+            send_whatsapp_message(phone_number, answer)
 
         return jsonify({"status": "ok"}), 200
 
@@ -65,7 +67,6 @@ def whatsapp_webhook():
         traceback.print_exc()
         return jsonify({"status": "fail"}), 500
 
-# === Healthcheck ===
 @app.route("/", methods=["GET"])
 def root():
     return "Flowise WhatsApp Bot is running ✅"

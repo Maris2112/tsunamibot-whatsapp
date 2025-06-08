@@ -13,7 +13,6 @@ BOT_CHAT_ID = os.environ.get("BOT_ID")  # Пример: "7775885000@c.us"
 
 WHATSAPP_API_URL = f"https://7105.api.greenapi.com/waInstance{WHATSAPP_INSTANCE_ID}/sendMessage/{WHATSAPP_TOKEN}"
 
-
 # === Flowise Request ===
 def ask_flowise(question, history=[]):
     try:
@@ -28,7 +27,6 @@ def ask_flowise(question, history=[]):
         print("[ERROR] Flowise call failed:", e)
         return "⚠️ Ошибка при обращении к ИИ. Попробуй позже."
 
-
 # === WhatsApp Send ===
 def send_whatsapp_message(phone, text):
     try:
@@ -41,7 +39,6 @@ def send_whatsapp_message(phone, text):
     except Exception:
         print("[ERROR] WhatsApp message failed:")
         traceback.print_exc()
-
 
 # === Webhook Handler ===
 @app.route("/whatsapp-webhook", methods=["POST"])
@@ -85,24 +82,11 @@ def whatsapp_webhook():
         traceback.print_exc()
         return jsonify({"status": "fail"}), 500
 
-
-        # --- Process message ---
-        phone_number = sender_id.replace("@c.us", "")
-        answer = ask_flowise(message)
-        send_whatsapp_message(phone_number, answer)
-
-        return jsonify({"status": "ok"}), 200
-
-    except Exception:
-        traceback.print_exc()
-        return jsonify({"status": "fail"}), 500
-
-
 # === Healthcheck ===
 @app.route("/", methods=["GET"])
 def root():
     return "Flowise WhatsApp Bot is running ✅"
 
-
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
+

@@ -26,11 +26,11 @@ def ask_flowise(question, history=[]):
         print("[ERROR] Flowise call failed:", e)
         return "⚠️ Ошибка при обращении к ИИ. Попробуй позже."
 
-# === WhatsApp ===
-def send_whatsapp_message(phone, text):
+# === WhatsApp Sender ===
+def send_whatsapp_message(chat_id, text):
     try:
         payload = {
-            "chatId": f"{phone}@c.us",
+            "chatId": chat_id,
             "message": text
         }
         requests.post(WHATSAPP_API_URL, json=payload)
@@ -38,12 +38,12 @@ def send_whatsapp_message(phone, text):
         print("[ERROR] WhatsApp message failed:")
         traceback.print_exc()
 
+# === Incoming Webhook ===
 @app.route("/whatsapp-webhook", methods=["POST"])
 def whatsapp_webhook():
     try:
         data = request.get_json(force=True)
 
-        # === Защита от самогенерации ===
         type_hook = data.get("typeWebhook")
         sender_id = data.get("senderData", {}).get("chatId")
         bot_id = BOT_CHAT_ID
@@ -54,12 +54,10 @@ def whatsapp_webhook():
         if sender_id == bot_id:
             return jsonify({"status": "self-message"}), 200
 
-        # === Обработка сообщения ===
         message = data.get("messageData", {}).get("textMessageData", {}).get("textMessage")
         if message:
-            phone_number = sender_id.replace("@c.us", "")
             answer = ask_flowise(message)
-            send_whatsapp_message(phone_number, answer)
+            send_whatsapp_message(sender_id, answer or "⚠️ Ответ не получен.")
 
         return jsonify({"status": "ok"}), 200
 
@@ -74,4 +72,3 @@ def root():
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
-

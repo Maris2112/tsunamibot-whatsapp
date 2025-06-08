@@ -46,7 +46,7 @@ def whatsapp_webhook():
         # === Защита от самогенерации ===
         type_hook = data.get("typeWebhook")
         sender_id = data.get("senderData", {}).get("chatId")
-        bot_id = data.get("instanceData", {}).get("wid") or BOT_CHAT_ID
+        bot_id = BOT_CHAT_ID
 
         if type_hook != "incomingMessageReceived":
             return jsonify({"status": "ignored"}), 200

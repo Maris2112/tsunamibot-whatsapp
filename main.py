@@ -10,7 +10,7 @@ WHATSAPP_INSTANCE_ID = os.environ.get("WHATSAPP_INSTANCE_ID")
 WHATSAPP_TOKEN = os.environ.get("WHATSAPP_TOKEN")
 WHATSAPP_API_URL = f"https://7105.api.greenapi.com/waInstance{WHATSAPP_INSTANCE_ID}/sendMessage/{WHATSAPP_TOKEN}"
 FLOWISE_URL = os.environ.get("FLOWISE_URL")
-BOT_CHAT_ID = os.environ.get("YOUR_BOT_ID")  # Пример: "7775885000@c.us"
+BOT_CHAT_ID = os.environ.get("BOT_ID")  # Пример: "7775885000@c.us"
 
 # === Flowise Request ===
 def ask_flowise(question, history=[]):

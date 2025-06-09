@@ -2,6 +2,8 @@ from flask import Flask, request, jsonify
 import requests
 import traceback
 import os
+from datetime import datetime
+import pytz
 
 app = Flask(__name__)
 
@@ -16,8 +18,13 @@ WHATSAPP_API_URL = f"https://7105.api.greenapi.com/waInstance{WHATSAPP_INSTANCE_
 # === Flowise Request ===
 def ask_flowise(question, history=[]):
     try:
+        # Получаем текущее время в Алматы
+        tz = pytz.timezone("Asia/Almaty")
+        now = datetime.now(tz).strftime("%A, %d %B %Y, %H:%M")
+        full_question = f"[{now}] {question}"
+
         payload = {
-            "question": question,
+            "question": full_question,
             "chatHistory": history
         }
         response = requests.post(FLOWISE_URL, json=payload, timeout=60)
@@ -88,4 +95,4 @@ def root():
     return "Flowise WhatsApp Bot is running ✅"
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8080))) 
